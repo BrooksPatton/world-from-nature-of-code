@@ -7,15 +7,13 @@ local foods = {}
 local foodLastAdded
 local randomWalkCreature
 
---TODO have the randomWalkCreature eat food and if doesn't find then big jump
-
 function love.load()
   width = love.graphics.getWidth()
   height = love.graphics.getHeight()
 
   foodLastAdded = love.timer.getTime()
 
-  for i = 1, 10 do
+  for i = 1, 100 do
     addFood()
   end
 
@@ -25,15 +23,37 @@ end
 
 function love.draw()
   for i, food in ipairs(foods) do
+    if food.dead then
+      table.remove(foods, i)
+    end
     food:display()
   end
 
-  randomWalkCreature:display()
+  if randomWalkCreature then
+    randomWalkCreature:display()
+  end
 end
 
 function love.update(dt)
+  if dt > 0.029 then dt = 0.029 end
+
   if shouldAddFood() then
     addFood()
+  end
+
+  removeDeadThings(foods)
+  
+  if randomWalkCreature and randomWalkCreature.dead then
+    randomWalkCreature = nil
+  end
+
+  if randomWalkCreature then
+    randomWalkCreature:searchForFood(foods)
+    randomWalkCreature:move(dt)
+    applyFriction(randomWalkCreature)
+    if randomWalkCreature.target then randomWalkCreature:eat() end
+    randomWalkCreature:starve()
+    randomWalkCreature:update()
   end
 end
 
@@ -55,3 +75,16 @@ function shouldAddFood()
   end
 end
 
+function applyFriction(c)
+  local v = c.velocity:normalized()
+  v = v * -.3
+  c:applyForce(v)
+end
+
+function removeDeadThings(foods)
+  for i, food in ipairs(foods) do
+    if food.dead then
+      table.remove(foods, i)
+    end
+  end
+end

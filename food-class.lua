@@ -10,6 +10,7 @@ function Food.new(location)
 
   t.location = location
   t:setType()
+  t.radius = math.abs(t.value) * 2
 
   return t
 end
@@ -20,12 +21,10 @@ function Food:setType()
   if r > 0.5 then
     self.type = 'normal'
     self.color = {0, 255, 0}
-    self.radius = 5
     self.value = 1
   else 
     self.type = 'poison'
     self.color = {255, 0, 0}
-    self.radius = 5
     self.value = -1
   end
 end
