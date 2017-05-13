@@ -5,7 +5,7 @@ local RandomWalkCreature = require('./randomWalkCreature-class')
 
 local foods = {}
 local foodLastAdded
-local randomWalkCreature
+local randomWalkCreatures = {}
 
 function love.load()
   width = love.graphics.getWidth()
@@ -17,8 +17,13 @@ function love.load()
     addFood()
   end
 
-  local location = Vector.new(width/2, height/2)
-  randomWalkCreature = RandomWalkCreature.new(location)
+  for i = 1, 10 do
+    local x = love.math.random(0, width)
+    local y = love.math.random(0, height)
+    local location = Vector.new(x, y)
+
+    table.insert(randomWalkCreatures, RandomWalkCreature.new(location))
+  end
 end
 
 function love.draw()
@@ -29,7 +34,7 @@ function love.draw()
     food:display()
   end
 
-  if randomWalkCreature then
+  for i, randomWalkCreature in ipairs(randomWalkCreatures) do
     randomWalkCreature:display()
   end
 end
@@ -42,16 +47,13 @@ function love.update(dt)
   end
 
   removeDeadThings(foods)
-  
-  if randomWalkCreature and randomWalkCreature.dead then
-    randomWalkCreature = nil
-  end
+  removeDeadThings(randomWalkCreatures)
 
-  if randomWalkCreature then
+  for i, randomWalkCreature in ipairs(randomWalkCreatures) do
     randomWalkCreature:searchForFood(foods)
+    if randomWalkCreature.target then randomWalkCreature:eat() end
     randomWalkCreature:move(dt)
     applyFriction(randomWalkCreature)
-    if randomWalkCreature.target then randomWalkCreature:eat() end
     randomWalkCreature:starve()
     randomWalkCreature:update()
   end
@@ -81,10 +83,10 @@ function applyFriction(c)
   c:applyForce(v)
 end
 
-function removeDeadThings(foods)
-  for i, food in ipairs(foods) do
-    if food.dead then
-      table.remove(foods, i)
+function removeDeadThings(tbl)
+  for i, v in ipairs(tbl) do
+    if v.dead then
+      table.remove(tbl, i)
     end
   end
 end

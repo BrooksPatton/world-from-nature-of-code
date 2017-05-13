@@ -11,6 +11,7 @@ function Food.new(location)
   t.location = location
   t:setType()
   t.radius = math.abs(t.value) * 2
+  t.type = 'food'
 
   return t
 end

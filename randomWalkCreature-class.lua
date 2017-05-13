@@ -19,22 +19,16 @@ function RandomWalkCreature.new(location)
   t.sightRange = 50
   t.speed = 25
 
-  t:setOffs()
-  t.noiseInc = 0.01
+  t.randomLoc = nil
 
   return t
-end
-
-function RandomWalkCreature:setOffs()
-  self.xoff = love.math.random(0, 10000000)
-  self.yoff = love.math.random(0, 10000000)
 end
 
 function RandomWalkCreature:display()
   love.graphics.setColor(self.color)
   love.graphics.circle('fill', self.location.x, self.location.y, self.health)
-  love.graphics.setColor(255, 255, 255)
-  love.graphics.circle('line', self.location.x, self.location.y, self.sightRange)
+  --love.graphics.setColor(255, 255, 255)
+  --love.graphics.circle('line', self.location.x, self.location.y, self.sightRange)
 end
 
 function RandomWalkCreature:searchForFood(foods)
@@ -47,6 +41,13 @@ function RandomWalkCreature:searchForFood(foods)
       end
     end
   end
+
+  if not self.target and not self.randomLoc then
+    local x = love.math.random(0, width)
+    local y = love.math.random(0, height)
+
+    self.randomLoc = Vector.new(x, y)
+  end
 end
 
 function RandomWalkCreature:move(dt)
@@ -55,26 +56,16 @@ function RandomWalkCreature:move(dt)
 
   if self.target then
     direction = self.target.location - self.location
-  else
-    local x = love.math.noise(self.xoff)
-    local y = love.math.noise(self.yoff)
-    
-    x = x * width
-    y = y * width
-
-    local randomLoc = Vector.new(x, y)
-
-    direction = self.location - randomLoc
-
-    self.xoff = self.xoff + self.noiseInc
-    self.yoff = self.yoff + self.noiseInc
+  elseif self.randomLoc then
+    direction = self.randomLoc - self.location
   end
 
-  direction:normalizeInplace()
-  local s = self.speed * dt
-  acc = direction * s
-
-  self:applyForce(acc)
+  if direction then
+    direction:normalizeInplace()
+    local s = self.speed * dt
+    acc = direction * s
+    self:applyForce(acc)
+  end
 end
 
 function RandomWalkCreature:applyForce(force)
@@ -86,6 +77,13 @@ function RandomWalkCreature:update()
   self.velocity = self.velocity + self.acceleration
   self.location = self.location + self.velocity
   self.acceleration = self.acceleration * 0
+
+  if self.randomLoc then
+    local distanceToRandom = (self.location - self.randomLoc):len()
+    if distanceToRandom <= 1 then
+      self:resetTargets()
+    end
+  end
 end
 
 function RandomWalkCreature:starve()
@@ -103,14 +101,22 @@ function RandomWalkCreature:starve()
 end
 
 function RandomWalkCreature:eat()
-  local distance = (self.location - self.target.location):len()
+  if self.target.type == 'food' and not self.target.dead then
+    local distance = (self.location - self.target.location):len()
 
-  if distance < self.health then
-    self.health = self.health + self.target.value
-    self.target.dead = true
+    if distance < self.health then
+      self.health = self.health + self.target.value
+      self.target.dead = true
+      self.target = nil
+    end
+  elseif self.target.type == 'food' and self.target.dead then
     self.target = nil
-    self:setOffs()
   end
+end
+
+function RandomWalkCreature:resetTargets()
+  self.target = nil
+  self.randomLoc = nil
 end
 
 return RandomWalkCreature
