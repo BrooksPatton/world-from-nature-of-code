@@ -18,11 +18,16 @@ function RandomWalkCreature.new(location)
   t.lastAteAt = love.timer.getTime()
   t.sightRange = 50
   t.speed = 25
-  t.xoff = love.math.random(0, 10000000)
-  t.yoff = love.math.random(0, 10000000)
+
+  t:setOffs()
   t.noiseInc = 0.01
 
   return t
+end
+
+function RandomWalkCreature:setOffs()
+  self.xoff = love.math.random(0, 10000000)
+  self.yoff = love.math.random(0, 10000000)
 end
 
 function RandomWalkCreature:display()
@@ -86,7 +91,7 @@ end
 function RandomWalkCreature:starve()
   local t = love.timer.getTime()
   
-  if(t - self.lastAteAt > 1) then
+  if(t - self.lastAteAt > 5) then
     self.health = self.health - 1
     self.lastAteAt = t
   end
@@ -104,6 +109,7 @@ function RandomWalkCreature:eat()
     self.health = self.health + self.target.value
     self.target.dead = true
     self.target = nil
+    self:setOffs()
   end
 end
 
