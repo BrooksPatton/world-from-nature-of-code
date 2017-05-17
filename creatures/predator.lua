@@ -1,38 +1,45 @@
 local Vector = require('./vector')
 
-local RandomWalkCreature = {}
-RandomWalkCreature.__index = RandomWalkCreature
+local Predator = {}
+Predator.__index = Predator
 
-function RandomWalkCreature.new(location)
+function Predator.new(location)
   local t = {}
-  setmetatable(t, RandomWalkCreature)
+  setmetatable(t, Predator)
 
   t.location = location
-  t.color = {150, 150, 255}
-  t.health = 10
-  t.mass = t.health
-  t.type = 'prey'
+  t.searchcolor = {255, 150, 150}
+  t.huntcolor = {255, 10, 10}
+  t.health = 30
+  t.mass = 50
+  t.radius = 15
 
   t.acceleration = Vector.new(0, 0)
   t.velocity = Vector.new(0, 0)
 
   t.lastAteAt = love.timer.getTime()
-  t.sightRange = 50
-  t.speed = 25
+  t.sightRange = 100
+  t.searchspeed = 30
+  t.huntspeed = 100
 
   t.randomLoc = nil
 
   return t
 end
 
-function RandomWalkCreature:display()
-  love.graphics.setColor(self.color)
-  love.graphics.circle('fill', self.location.x, self.location.y, self.health)
+function Predator:display()
+  if self.target then
+    love.graphics.setColor(self.huntcolor)
+  else
+    love.graphics.setColor(self.searchcolor)
+  end
+
+  love.graphics.circle('fill', self.location.x, self.location.y, self.radius)
   --love.graphics.setColor(255, 255, 255)
   --love.graphics.circle('line', self.location.x, self.location.y, self.sightRange)
 end
 
-function RandomWalkCreature:searchForFood(foods)
+function Predator:searchForFood(foods)
   if not self.target then
     for i, food in ipairs(foods) do
       local distance = (self.location - food.location):len()
@@ -51,9 +58,13 @@ function RandomWalkCreature:searchForFood(foods)
   end
 end
 
-function RandomWalkCreature:move(dt)
+function Predator:move(dt)
   local acc
   local direction
+
+  if self.target and self.target.dead then
+    self.target = nil
+  end
 
   if self.target then
     direction = self.target.location - self.location
@@ -63,18 +74,23 @@ function RandomWalkCreature:move(dt)
 
   if direction then
     direction:normalizeInplace()
-    local s = self.speed * dt
+    local s 
+    if self.target then
+      s = self.huntspeed * dt
+    else
+      s = self.searchspeed * dt
+    end
     acc = direction * s
     self:applyForce(acc)
   end
 end
 
-function RandomWalkCreature:applyForce(force)
+function Predator:applyForce(force)
   local f = force / self.mass
   self.acceleration = self.acceleration + f
 end
 
-function RandomWalkCreature:update()
+function Predator:update()
   self.velocity = self.velocity + self.acceleration
   self.location = self.location + self.velocity
   self.acceleration = self.acceleration * 0
@@ -87,10 +103,10 @@ function RandomWalkCreature:update()
   end
 end
 
-function RandomWalkCreature:starve()
+function Predator:starve()
   local t = love.timer.getTime()
   
-  if(t - self.lastAteAt > 5) then
+  if(t - self.lastAteAt > 1) then
     self.health = self.health - 1
     self.lastAteAt = t
   end
@@ -101,12 +117,12 @@ function RandomWalkCreature:starve()
 
 end
 
-function RandomWalkCreature:eat()
-  if self.target.type == 'food' and not self.target.dead then
+function Predator:eat()
+  if self.target.type == 'prey' and not self.target.dead then
     local distance = (self.location - self.target.location):len()
 
-    if distance < self.health then
-      self.health = self.health + self.target.value
+    if distance < self.radius then
+      self.health = self.health + self.target.health
       self.target.dead = true
       self.target = nil
     end
@@ -115,9 +131,9 @@ function RandomWalkCreature:eat()
   end
 end
 
-function RandomWalkCreature:resetTargets()
+function Predator:resetTargets()
   self.target = nil
   self.randomLoc = nil
 end
 
-return RandomWalkCreature
+return Predator

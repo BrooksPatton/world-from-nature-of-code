@@ -2,27 +2,35 @@ local Vector = require('./vector')
 local Food = require('./food-class')
 local utility = require('./utility')
 local RandomWalkCreature = require('./randomWalkCreature-class')
+local Predator = require('./creatures/predator')
 
 local foods = {}
 local foodLastAdded
+local randomWalkerLastAdded
 local randomWalkCreatures = {}
+local predators = {}
 
 function love.load()
   width = love.graphics.getWidth()
   height = love.graphics.getHeight()
 
   foodLastAdded = love.timer.getTime()
+  randomWalkerLastAdded = love.timer.getTime()
 
   for i = 1, 100 do
     addFood()
   end
 
   for i = 1, 10 do
+    addRandomWalker()
+  end
+
+  for i = 1, 3 do
     local x = love.math.random(0, width)
     local y = love.math.random(0, height)
-    local location = Vector.new(x, y)
+    local predLocation = Vector.new(x, y)
 
-    table.insert(randomWalkCreatures, RandomWalkCreature.new(location))
+    table.insert(predators, Predator.new(predLocation))
   end
 end
 
@@ -37,6 +45,10 @@ function love.draw()
   for i, randomWalkCreature in ipairs(randomWalkCreatures) do
     randomWalkCreature:display()
   end
+
+  for i, predator in ipairs(predators) do
+    predator:display()
+  end
 end
 
 function love.update(dt)
@@ -45,10 +57,24 @@ function love.update(dt)
   if shouldAddFood() then
     addFood()
   end
+  
+  if shouldAddRandomWalker() then 
+    addRandomWalker()
+  end
 
   removeDeadThings(foods)
   removeDeadThings(randomWalkCreatures)
+  removeDeadThings(predators)
 
+  for i, predator in ipairs(predators) do
+    predator:searchForFood(randomWalkCreatures)
+    if predator.target then predator:eat() end
+    predator:move(dt)
+    applyFriction(predator)
+    predator:starve()
+    predator:update()
+  end
+  
   for i, randomWalkCreature in ipairs(randomWalkCreatures) do
     randomWalkCreature:searchForFood(foods)
     if randomWalkCreature.target then randomWalkCreature:eat() end
@@ -57,6 +83,14 @@ function love.update(dt)
     randomWalkCreature:starve()
     randomWalkCreature:update()
   end
+end
+
+function addRandomWalker()
+  local x = love.math.random(0, width)
+  local y = love.math.random(0, height)
+  local location = Vector.new(x, y)
+
+  table.insert(randomWalkCreatures, RandomWalkCreature.new(location))
 end
 
 function addFood()
@@ -71,6 +105,17 @@ function shouldAddFood()
   local r = utility.monteCarloRandom()
 
   if r < 0.1 then
+    return true
+  else
+    return false
+  end
+end
+
+function shouldAddRandomWalker()
+  local now = love.timer.getTime()
+
+  if now - randomWalkerLastAdded > 5 then
+    randomWalkerLastAdded = now
     return true
   else
     return false
